@@ -1,10 +1,16 @@
 package me.lucat1.sock.reader
 
-import kotlinx.coroutines.*
+import io.klogging.Level
+import io.klogging.context.logContext
+import io.klogging.logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import me.lucat1.sock.ReaderWriter
-
-import java.io.IOException
+import me.lucat1.sock.server.ClientHandler
 import java.io.File
+import java.io.IOException
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.channels.ServerSocketChannel
@@ -13,21 +19,21 @@ import java.nio.file.Files
 import kotlin.system.exitProcess
 
 class Server(sock: String, output: String) {
+    private val logger = logger("server")
     private val sockFile: File = File(sock)
     private val sockAddress: UnixDomainSocketAddress = UnixDomainSocketAddress.of(sockFile.path)
 
     private val outputFile: File = File(output)
 
-    fun run() {
+    suspend fun run() = withContext(Dispatchers.IO) {
         try {
             Files.deleteIfExists(sockFile.toPath())
         } catch (e: Exception) {
-            println("Could not delete previous UNIX socket at ${sockFile.path}")
-            e.printStackTrace()
+            logger.error("Could not delete previous UNIX socket at {sockPath}", sockFile.path)
             exitProcess(5)
         }
         val channel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
-        println("Listening on ${sockFile.path}, writing to ${outputFile.path}")
+        logger.info("Listening on {sockPath}, writing to {outputPath}", sockFile.path, outputFile.path)
 
         runBlocking {
             /*
@@ -56,13 +62,20 @@ class Server(sock: String, output: String) {
         try {
             channel.bind(sockAddress).run {
                 while (true) {
-                    val client = channel.accept()
-                    launch {
-                        /*
-                         * Handle the client messages in a separate coroutine.
-                         * This way we can support multiple clients sending requests concurrently.
-                         */
-                        handleClient(client, clientId++)
+                    val socket = channel.accept()
+                    val clientId = clientId++
+
+                    withContext(logContext("clientId" to clientId)) {
+                        val handler = ClientHandler(socket, clientId, logger)
+                        socket.run {
+                            launch {
+                                /*
+                                 * Handle the client messages in a separate coroutine.
+                                 * This way we can support multiple clients sending requests concurrently.
+                                 */
+                                handler.handle()
+                            }
+                        }
                     }
                 }
             }
@@ -74,22 +87,5 @@ class Server(sock: String, output: String) {
     }
 
     private suspend fun writer() = withContext(Dispatchers.IO) {
-    }
-
-    @OptIn(ExperimentalUnsignedTypes::class)
-    private suspend fun handleClient(client: SocketChannel, id: Int) = withContext(Dispatchers.IO) {
-        try {
-            println("Client connected #$id")
-            val rw = ReaderWriter(client)
-            while (true) {
-                val message = rw.read()
-                if (message == null)
-                    break
-                println("Got message: ${message.header.messageType} (${message.header.contentLength}) \"${message.content ?: ""}\"")
-            }
-            println("Client #$id disconnected")
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
     }
 }

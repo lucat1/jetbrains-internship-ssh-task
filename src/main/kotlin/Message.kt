@@ -1,5 +1,7 @@
 package me.lucat1.sock
 
+import me.lucat1.sock.MessageType.entries
+
 /*
  * Message header size. Given by:
  * + 1 for MessageType
@@ -68,26 +70,34 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
         return ba
     }
 
-   fun validate() {
-       // These messageTypes allow for Content Length > 0
-       if (
-           messageType == MessageType.Write ||
-           messageType == MessageType.Error
-       )
-           return
+   @Throws(InvalidHeader::class)
+    fun validate() {
+        // These messageTypes allow for Content Length > 0
+        if (
+            messageType == MessageType.Write ||
+            messageType == MessageType.Error
+        )
+            return
 
-       if (contentLength != 0u)
-           throw InvalidHeader(messageType, contentLength)
-   }
+        if (contentLength > 0u)
+            throw InvalidHeader(messageType, contentLength)
+    }
 }
 
+// The builtin constructor should be used only by the client to build malformed
+// messages. This way we can test the error handling.
 @OptIn(ExperimentalUnsignedTypes::class)
 class Message(private val messageType: MessageType, val content: String?) {
     val contentLength = content?.encodeToByteArray()?.size?.toUInt() ?: 0u
     val header: Header = Header(messageType, contentLength)
 
-    init {
-        header.validate()
+    companion object {
+        // This constructor should always be used, except when we want to craft malformed messages
+        fun checked(messageType: MessageType, content: String?): Message {
+            val msg = Message(messageType, content)
+            msg.header.validate()
+            return msg
+        }
     }
 
     fun toUByteArray(): UByteArray {

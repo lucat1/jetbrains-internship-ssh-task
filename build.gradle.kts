@@ -14,6 +14,7 @@ dependencies {
     testImplementation(kotlin("test"))
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("io.klogging:klogging-jvm:0.7.3")
 }
 
 tasks.test {

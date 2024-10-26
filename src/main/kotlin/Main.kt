@@ -1,5 +1,12 @@
 package me.lucat1.sock
 
+import io.klogging.Level
+import io.klogging.config.ANSI_CONSOLE
+import io.klogging.config.loggingConfiguration
+import io.klogging.rendering.RENDER_ANSI
+import io.klogging.rendering.RENDER_SIMPLE
+import io.klogging.sending.STDOUT
+import kotlinx.coroutines.coroutineScope
 import me.lucat1.sock.reader.CLIENT_USAGE
 import me.lucat1.sock.reader.Client
 import me.lucat1.sock.reader.Server
@@ -30,7 +37,7 @@ Arguments:
     socket_path     The path to the Unix Domain Socket where the program will bind and listen for messages.
 """
 
-fun main(args: Array<String>) {
+suspend fun main(args: Array<String>): Unit = coroutineScope {
     /*
      * Note that, as opposed to standard UNIX practice, args[0] is not the program name.
      * This is the observed behaviour when running with Gradle.
@@ -42,6 +49,14 @@ fun main(args: Array<String>) {
 
     when (val subcommand = args[0]) {
         "server" -> {
+            loggingConfiguration {
+                sink("stdout", RENDER_ANSI, STDOUT)
+                logging {
+                    fromMinLevel(Level.DEBUG) {
+                        toSink("stdout")
+                    }
+                }
+            }
             if (args.size < 3) {
                 print(serverUsage)
                 exitProcess(3)
