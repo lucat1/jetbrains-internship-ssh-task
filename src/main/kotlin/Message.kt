@@ -32,6 +32,9 @@ enum class MessageType(val code: UByte) {
 @OptIn(ExperimentalStdlibApi::class)
 class MessageTypeException(mt: UByte): Exception("Invalid message type: 0x${mt.toHexString()}")
 
+@OptIn(ExperimentalStdlibApi::class)
+class InvalidHeader(mt: MessageType, contentLength: UInt): Exception("Message type $mt has content length $contentLength")
+
 @OptIn(ExperimentalUnsignedTypes::class)
 class Header(val messageType: MessageType, val contentLength: UInt) {
     companion object {
@@ -63,5 +66,36 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
             ba[CONTENT_LENGTH_START+i] = cl[i]
         }
         return ba
+    }
+
+   fun validate() {
+       // These messageTypes allow for Content Length > 0
+       if (
+           messageType == MessageType.Write ||
+           messageType == MessageType.Error
+       )
+           return
+
+       if (contentLength != 0u)
+           throw InvalidHeader(messageType, contentLength)
+   }
+}
+
+@OptIn(ExperimentalUnsignedTypes::class)
+class Message(private val messageType: MessageType, val content: String?) {
+    val contentLength = content?.encodeToByteArray()?.size?.toUInt() ?: 0u
+    val header: Header = Header(messageType, contentLength)
+
+    init {
+        header.validate()
+    }
+
+    fun toUByteArray(): UByteArray {
+        val size = HEADER_SIZE + header.contentLength.toInt();
+        val arr = UByteArray(size);
+        header.toUByteArray().copyInto(arr)
+        content?.toByteArray()?.toUByteArray()?.copyInto(arr, HEADER_SIZE);
+
+        return arr
     }
 }

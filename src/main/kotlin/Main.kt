@@ -1,5 +1,7 @@
 package me.lucat1.sock
 
+import me.lucat1.sock.reader.CLIENT_USAGE
+import me.lucat1.sock.reader.Client
 import me.lucat1.sock.reader.Server
 import kotlin.system.exitProcess
 
@@ -23,10 +25,7 @@ Description:
     The syntax for a command is:
         <Message Type>  <Data>
     Exampels:
-        2 "hello world"       # append hello world to the output file
-        3                     # clear the output file
-        5                     # send a ping
-   
+$CLIENT_USAGE
 Arguments:
     socket_path     The path to the Unix Domain Socket where the program will bind and listen for messages.
 """
@@ -57,6 +56,9 @@ fun main(args: Array<String>) {
                 print(clientUsage)
                 exitProcess(4)
             }
+            val socketPath = args[1]
+            val client = Client(socketPath)
+            client.run()
         }
         else -> {
             println("Invalid subcommand: $subcommand")

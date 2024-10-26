@@ -24,6 +24,10 @@ application {
     mainClass = "${group}.MainKt"
 }
 
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
+
 kotlin {
     jvmToolchain(21)
 }
