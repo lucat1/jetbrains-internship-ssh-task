@@ -1,15 +1,13 @@
 package me.lucat1.sock
 
 import io.klogging.Level
-import io.klogging.config.ANSI_CONSOLE
 import io.klogging.config.loggingConfiguration
 import io.klogging.rendering.RENDER_ANSI
-import io.klogging.rendering.RENDER_SIMPLE
 import io.klogging.sending.STDOUT
 import kotlinx.coroutines.coroutineScope
 import me.lucat1.sock.reader.CLIENT_USAGE
 import me.lucat1.sock.reader.Client
-import me.lucat1.sock.reader.Server
+import me.lucat1.sock.server.Server
 import kotlin.system.exitProcess
 
 const val usage = """Usage: sock subcommand [args...]

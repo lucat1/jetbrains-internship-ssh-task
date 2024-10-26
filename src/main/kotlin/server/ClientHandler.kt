@@ -2,6 +2,7 @@ package me.lucat1.sock.server
 
 import io.klogging.Klogger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import me.lucat1.sock.InvalidHeader
 import me.lucat1.sock.Message
@@ -9,7 +10,10 @@ import me.lucat1.sock.MessageType
 import me.lucat1.sock.ReaderWriter
 import java.nio.channels.SocketChannel
 
-class ClientHandler(private val socket: SocketChannel, private val id: Int, private val logger: Klogger) {
+class ClientHandler(private val socket: SocketChannel,
+                    private val id: Int,
+                    private val writerChan: Channel<WriterMessage>,
+                    private val logger: Klogger) {
     private val rw = ReaderWriter(socket, logger)
 
     suspend fun handle() = withContext(Dispatchers.IO) {
@@ -19,7 +23,6 @@ class ClientHandler(private val socket: SocketChannel, private val id: Int, priv
                 // If message read is empty the client has disconnected
                 val message = rw.read() ?: break
                 logger.debug("Received message {type} ({contentLength}) {content}", message.header.messageType, message.header.contentLength, message.content)
-
                 try {
                     message.header.validate()
 
@@ -28,10 +31,12 @@ class ClientHandler(private val socket: SocketChannel, private val id: Int, priv
                             // Do nothing
                         }
                         MessageType.Write -> {
-                            sendError("write: not implemented")
+                            callWriter(WriterAction.Write, message.content)
+                            sendOk()
                         }
                         MessageType.Clear -> {
-                            sendError("clear: not implemented")
+                            callWriter(WriterAction.Clear, message.content)
+                            sendOk()
                         }
                         MessageType.Error -> {
                             sendError("Unexpected message")
@@ -53,11 +58,21 @@ class ClientHandler(private val socket: SocketChannel, private val id: Int, priv
         }
     }
 
-    suspend private fun sendError(cause: String?) {
+    private suspend fun sendError(cause: String?) {
         rw.write(Message.checked(MessageType.Error, cause))
     }
 
-    suspend private fun sendOk() {
+    private suspend fun sendOk() {
         rw.write(Message.checked(MessageType.Ok, null))
+    }
+
+    private suspend fun callWriter(writerAction: WriterAction, content: String?) {
+        val ackChannel = Channel<Throwable?>()
+        val writerMessage = WriterMessage(writerAction, content, ackChannel)
+        writerChan.send(writerMessage)
+        // Wait for the acknowledgement before proceeding
+        val res = ackChannel.receive()
+        if (res != null)
+            throw res
     }
 }

@@ -1,29 +1,31 @@
-package me.lucat1.sock.reader
+package me.lucat1.sock.server
 
-import io.klogging.Level
 import io.klogging.context.logContext
 import io.klogging.logger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import me.lucat1.sock.ReaderWriter
-import me.lucat1.sock.server.ClientHandler
 import java.io.File
 import java.io.IOException
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.channels.ServerSocketChannel
-import java.nio.channels.SocketChannel
 import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.Path
 import kotlin.system.exitProcess
 
 class Server(sock: String, output: String) {
     private val logger = logger("server")
+
     private val sockFile: File = File(sock)
     private val sockAddress: UnixDomainSocketAddress = UnixDomainSocketAddress.of(sockFile.path)
 
-    private val outputFile: File = File(output)
+    private val outputPath: Path = Path(output)
+
+    private val writerChannel = Channel<WriterMessage>()
 
     suspend fun run() = withContext(Dispatchers.IO) {
         try {
@@ -33,7 +35,7 @@ class Server(sock: String, output: String) {
             exitProcess(5)
         }
         val channel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
-        logger.info("Listening on {sockPath}, writing to {outputPath}", sockFile.path, outputFile.path)
+        logger.info("Listening on {sockPath}, writing to {outputPath}", sockFile.path, outputPath)
 
         runBlocking {
             /*
@@ -52,7 +54,7 @@ class Server(sock: String, output: String) {
              * be streamlined into a channel and handled one-by-one sequentially by the "consumer".
              */
             launch {
-                writer()
+                Writer(outputPath, writerChannel, logger).write()
             }
         }
     }
@@ -66,15 +68,13 @@ class Server(sock: String, output: String) {
                     val clientId = clientId++
 
                     withContext(logContext("clientId" to clientId)) {
-                        val handler = ClientHandler(socket, clientId, logger)
-                        socket.run {
-                            launch {
-                                /*
-                                 * Handle the client messages in a separate coroutine.
-                                 * This way we can support multiple clients sending requests concurrently.
-                                 */
-                                handler.handle()
-                            }
+                        val handler = ClientHandler(socket, clientId, writerChannel, logger)
+                        launch {
+                            /*
+                             * Handle the client messages in a separate coroutine.
+                             * This way we can support multiple clients sending requests concurrently.
+                             */
+                            socket.run { handler.handle() }
                         }
                     }
                 }
