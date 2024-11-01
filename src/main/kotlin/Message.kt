@@ -1,7 +1,5 @@
 package me.lucat1.sock
 
-import me.lucat1.sock.MessageType.entries
-
 /*
  * Message header size. Given by:
  * + 1 for MessageType
@@ -23,23 +21,65 @@ enum class MessageType(val code: UByte) {
     Ping(5u);
 
     companion object {
-        fun fromByte(code: UByte) = entries.first { it.code == code }
+        /**
+         * Obtain a MessageType from a 1-byte encoding.
+         *
+         * @param byt the unsigned byte encoding to be parsed.
+         */
+        fun fromUByte(byt: UByte) = entries.first { it.code == byt }
     }
 
+    /**
+     * Obtain the associated UByte representation of a MessageType.
+     *
+     * @return the 1-byte representation of this MessageType.
+     */
     fun toUByte(): UByte {
         return this.code
     }
 }
 
 @OptIn(ExperimentalStdlibApi::class)
-class MessageTypeException(mt: UByte): Exception("Invalid message type: 0x${mt.toHexString()}")
+/**
+ * Signals an invalid MessageType error.
+ *
+ * @constructor Builds from raw 1-byte value of the invalid MessageType.
+ *
+ * @param messageType The invalid unsigned byte representing a MessageType.
+ */
+class MessageTypeException(messageType: UByte): Exception("Invalid message type: 0x${messageType.toHexString()}")
 
-@OptIn(ExperimentalStdlibApi::class)
-class InvalidHeader(mt: MessageType, contentLength: UInt): Exception("Message type $mt has content length $contentLength")
+/**
+ * Signals an invalid header, due to an invalid content length given the MessageType.
+ *
+ * @constructor Builds the error from the MessageType and the content length.
+ *
+ * @param messageType The MessageType associated with the header.
+ * @param contentLength The content length provided in the header.
+ */
+class InvalidHeaderException(messageType: MessageType, contentLength: UInt): Exception("Message type $messageType has content length $contentLength")
 
+/**
+ * Representation of the Header for a Message.
+ *
+ * @property messageType The header's message type.
+ * @property contentLength The header's content length.
+ * @constructor Creates a Header given the message type and content length
+ */
 @OptIn(ExperimentalUnsignedTypes::class)
 class Header(val messageType: MessageType, val contentLength: UInt) {
     companion object {
+        /**
+         * Parses the header from an 8 unsigned byte buffer.
+         * NOTE: the header is not checked for validity. This is useful to
+         * construct malformed headers from the client to test error
+         * handling on the server side.
+         *
+         * @param rawHeader 8-byte long unsigned byte array.
+         * @return A Header instance containing the appropriate MessageType and content length.
+         * @throws MessageTypeException
+         */
+        @Throws(MessageTypeException::class)
         fun fromByteArray(rawHeader: UByteArray): Header {
             assert(rawHeader.size == HEADER_SIZE)
 
@@ -48,7 +88,7 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
             val mt = rawHeader[0]
 
             try {
-                messageType = MessageType.fromByte(mt)
+                messageType = MessageType.fromUByte(mt)
             } catch(_: NoSuchElementException) {
                 throw MessageTypeException(mt)
             }
@@ -60,6 +100,11 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
         }
     }
 
+    /**
+     * Encodes the Header into an 8 unsigned byte array.
+     *
+     * @return the 8 unsigned byte representation of this header.
+     */
     fun toUByteArray(): UByteArray {
         val ba = UByteArray(HEADER_SIZE)
         ba[0] = messageType.toUByte()
@@ -70,7 +115,13 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
         return ba
     }
 
-   @Throws(InvalidHeader::class)
+    /**
+     * Validates the header against the following constraints:
+     * - If messageType is Writer or Error, then content length
+     *   can be an arbitrary value.
+     * - Else, content length must be 0.
+     */
+    @Throws(InvalidHeaderException::class)
     fun validate() {
         // These messageTypes allow for Content Length > 0
         if (
@@ -80,12 +131,18 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
             return
 
         if (contentLength > 0u)
-            throw InvalidHeader(messageType, contentLength)
+            throw InvalidHeaderException(messageType, contentLength)
     }
 }
 
-// The builtin constructor should be used only by the client to build malformed
-// messages. This way we can test the error handling.
+/**
+ * Representation of a protocol Message.
+ *
+ * @property messageType The message's type.
+ * @property content The message's content.
+ * @constructor Create an **unchecked** message. This constructor should only
+ *              be used when it's desirable to construct malformed messages.
+ */
 @OptIn(ExperimentalUnsignedTypes::class)
 class Message(private val messageType: MessageType, val content: String?) {
     val contentLength = content?.encodeToByteArray()?.size?.toUInt() ?: 0u
@@ -93,6 +150,14 @@ class Message(private val messageType: MessageType, val content: String?) {
 
     companion object {
         // This constructor should always be used, except when we want to craft malformed messages
+        /**
+         * Creates a **checked** message with the given message type and content.
+         *
+         * @param messageType The message's type.
+         * @param content The message's content.
+         * @return A valid Message instance.
+         */
+        @Throws(InvalidHeaderException::class)
         fun checked(messageType: MessageType, content: String?): Message {
             val msg = Message(messageType, content)
             msg.header.validate()
@@ -100,6 +165,12 @@ class Message(private val messageType: MessageType, val content: String?) {
         }
     }
 
+    /**
+     * Returns an unsigned byte array of the appropriate size, containing the message
+     * content encoded as per the protocol specification.
+     *
+     * @return an unsigned byte array containing the encoded message.
+     */
     fun toUByteArray(): UByteArray {
         val size = HEADER_SIZE + header.contentLength.toInt();
         val arr = UByteArray(size);

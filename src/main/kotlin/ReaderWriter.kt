@@ -23,7 +23,7 @@ class ReaderWriter(private val socket: SocketChannel, private val logger: Klogge
 
     // Reads one message from the socket, along with its content.
     // NOTE: not guarantee the correctness of the message. It should be checked separately by the caller.
-    @Throws(InvalidHeader::class)
+    @Throws(InvalidHeaderException::class)
     suspend fun read(): Message? = withContext(Dispatchers.IO) {
         val buffer = ByteBuffer.allocate(HEADER_SIZE)
         logger.debug("Reading {nBytes} bytes", HEADER_SIZE)

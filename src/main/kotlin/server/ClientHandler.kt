@@ -4,7 +4,7 @@ import io.klogging.Klogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
-import me.lucat1.sock.InvalidHeader
+import me.lucat1.sock.InvalidHeaderException
 import me.lucat1.sock.Message
 import me.lucat1.sock.MessageType
 import me.lucat1.sock.ReaderWriter
@@ -45,7 +45,7 @@ class ClientHandler(private val socket: SocketChannel,
                             sendOk()
                         }
                     }
-                } catch (e: InvalidHeader) {
+                } catch (e: InvalidHeaderException) {
                     logger.warn("Received invalid message {type} {contentLength}", message.header.messageType, message.header.contentLength)
                     // Send an error and keep the connection alive
                     sendError("Invalid message: ${e.message}")
