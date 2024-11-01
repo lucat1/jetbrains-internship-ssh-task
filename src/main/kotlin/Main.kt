@@ -25,14 +25,16 @@ Arguments:
 """
 
 const val clientUsage = """Usage: sock client <socket_path>
+    
+Arguments:
+    socket_path     The path to the Unix Domain Socket where the program will bind and listen for messages.
+    
 Description:
     Opens a connection to the specified UNIX socket and allows to send commands interactively
     The syntax for a command is:
         <Message Type>  <Data>
-    Exampels:
+    Message Types:
 $CLIENT_USAGE
-Arguments:
-    socket_path     The path to the Unix Domain Socket where the program will bind and listen for messages.
 """
 
 suspend fun main(args: Array<String>): Unit = coroutineScope {
@@ -47,6 +49,12 @@ suspend fun main(args: Array<String>): Unit = coroutineScope {
 
     when (val subcommand = args[0]) {
         "server" -> {
+            if (args.size < 3) {
+                print(serverUsage)
+                exitProcess(3)
+            }
+
+            // Setup the klogging structured logging library (only on the server)
             loggingConfiguration {
                 sink("stdout", RENDER_ANSI, STDOUT)
                 logging {
@@ -55,23 +63,21 @@ suspend fun main(args: Array<String>): Unit = coroutineScope {
                     }
                 }
             }
-            if (args.size < 3) {
-                print(serverUsage)
-                exitProcess(3)
-            }
+
             val socketPath = args[1]
             val filePath = args[2]
-            val server = Server(socketPath, filePath)
-            server.run()
+
+            Server(socketPath, filePath).run()
         }
         "client" -> {
             if (args.size < 2) {
                 print(clientUsage)
                 exitProcess(4)
             }
+
             val socketPath = args[1]
-            val client = Client(socketPath)
-            client.run()
+
+            Client(socketPath).run()
         }
         else -> {
             println("Invalid subcommand: $subcommand")

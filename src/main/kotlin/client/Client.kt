@@ -45,21 +45,21 @@ class Client(sock: String) {
                 }
 
                 val rw = ReaderWriter(chan, logger)
-                // Returns if we're expecting a reply to the command just sent
+                // If the result of handleCommand is true, then we're expecting a reply to the command just sent
                 val expecting = handleCommand(rw, line.split(" "))
                 if (!expecting)
                     continue
 
                 val msg = rw.read() ?: break
                 msg.header.validate()
-                println("< ${msg.header.messageType} (${msg.header.contentLength}) ${msg.content}")
+                println("< ${msg.header.messageType} (${msg.header.contentLength}) ${msg.content}\n")
             }
 
             println("Server closed")
         }
     }
 
-    @OptIn(ExperimentalUnsignedTypes::class)
+    // If the result is true we're expecting a reply from the server before moving forward
     private suspend fun handleCommand(rw: ReaderWriter, parts: List<String>): Boolean = withContext(Dispatchers.IO) {
         try {
             val cmd = parts[0]

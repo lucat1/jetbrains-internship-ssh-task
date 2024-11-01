@@ -14,9 +14,9 @@ enum class WriterAction {
     Clear,
 }
 
-class WriterMessage(public val action: WriterAction,
-                    public val content: String?,
-                    public val ackChannel: Channel<Throwable?>) { }
+class WriterMessage(val action: WriterAction,
+                    val content: String?,
+                    val ackChannel: Channel<Throwable?>) { }
 
 class Writer(private val outputPath: Path, private val chan: Channel<WriterMessage>, private var logger: Klogger) {
     val file = File(outputPath.toString())
@@ -36,12 +36,14 @@ class Writer(private val outputPath: Path, private val chan: Channel<WriterMessa
                         assert(msg.content != null)
                         FileOutputStream(file, true).bufferedWriter().use { writer ->
                             writer.write(msg.content as String)
+                            logger.info("Appended {bytes} characters to {file}", msg.content.length, file)
                         }
                     }
 
                     WriterAction.Clear -> {
                         FileWriter(file).use { writer ->
                             writer.write("")
+                            logger.info("Cleared {file}", file)
                         }
                     }
                 }
