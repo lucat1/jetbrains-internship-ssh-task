@@ -147,13 +147,14 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
  */
 @OptIn(ExperimentalUnsignedTypes::class)
 class Message(private val messageType: MessageType, val content: String?) {
-    val contentLength = content?.encodeToByteArray()?.size?.toUInt() ?: 0u
+    private val contentLength = content?.encodeToByteArray()?.size?.toUInt() ?: 0u
     val header: Header = Header(messageType, contentLength)
 
     companion object {
-        // This constructor should always be used, except when we want to craft malformed messages
         /**
          * Creates a **checked** message with the given message type and content.
+         * NOTE: This constructor should always be used, except when the aim is
+         * to purposefully craft malformed messages.
          *
          * @param messageType The message's type.
          * @param content The message's content.
@@ -175,10 +176,10 @@ class Message(private val messageType: MessageType, val content: String?) {
      * @return an unsigned byte array containing the encoded message.
      */
     fun toUByteArray(): UByteArray {
-        val size = HEADER_SIZE + header.contentLength.toInt();
-        val arr = UByteArray(size);
+        val size = HEADER_SIZE + header.contentLength.toInt()
+        val arr = UByteArray(size)
         header.toUByteArray().copyInto(arr)
-        content?.toByteArray()?.toUByteArray()?.copyInto(arr, HEADER_SIZE);
+        content?.toByteArray()?.toUByteArray()?.copyInto(arr, HEADER_SIZE)
 
         return arr
     }
