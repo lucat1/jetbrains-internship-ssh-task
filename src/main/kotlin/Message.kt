@@ -77,7 +77,7 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
          *
          * @param rawHeader 8-byte long unsigned byte array.
          * @return A Header instance containing the appropriate MessageType and content length.
-         * @throws MessageTypeException
+         * @throws MessageTypeException if the message type byte is invalid.
          */
         @Throws(MessageTypeException::class)
         fun fromByteArray(rawHeader: UByteArray): Header {
@@ -120,6 +120,8 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
      * - If messageType is Writer or Error, then content length
      *   can be an arbitrary value.
      * - Else, content length must be 0.
+     *
+     * @throws InvalidHeaderException If the header is invalid.
      */
     @Throws(InvalidHeaderException::class)
     fun validate() {
@@ -156,6 +158,7 @@ class Message(private val messageType: MessageType, val content: String?) {
          * @param messageType The message's type.
          * @param content The message's content.
          * @return A valid Message instance.
+         * @throws InvalidHeaderException If the constructed header (messageType, content length) is invalid.
          */
         @Throws(InvalidHeaderException::class)
         fun checked(messageType: MessageType, content: String?): Message {
