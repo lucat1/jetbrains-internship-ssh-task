@@ -6,8 +6,13 @@ package me.lucat1.sock
  * Further, it appears that sh{r,l} perform arithmetic shift operations on Bytes, thus the sign matters.
  */
 
-// The uIntToUBytes function is taken from https://stackoverflow.com/a/72851059
-// and slightly modified to fit the purpose of this project.
+/**
+ * Converts an unsigned integer to an unsigned byte array of length 4.
+ * NOTE: adapted from https://stackoverflow.com/a/72851059
+ *
+ * @param i The unsigned integer to convert.
+ * @return An unsigned byte array of length 4, containing the integer encoded in big-endian.
+ */
 @OptIn(ExperimentalUnsignedTypes::class)
 fun uIntToUBytes(i: UInt): UByteArray {
     return (3 downTo 0).map {
@@ -15,6 +20,12 @@ fun uIntToUBytes(i: UInt): UByteArray {
     }.toUByteArray()
 }
 
+/**
+ * Converts an unsigned byte array of length 4 to an unsigned integer.
+ *
+ * @param b The unsigned byte array containing a big-endian encoding of an unsigned 32-bit integer.
+ * @return The parsed unsigned integer.
+ */
 @OptIn(ExperimentalUnsignedTypes::class)
 fun uBytesToUInt(b: UByteArray): UInt {
     assert(b.size == 4)
