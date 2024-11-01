@@ -12,7 +12,10 @@ import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.channels.SocketChannel
 
-const val CLIENT_USAGE = """        2                     Append hello world to the output file
+const val CLIENT_USAGE = """Command syntax:
+        <op> <data...>
+Where <op> is one of the follwoing:
+        2                     Append the text in data to the output file
         3                     Clear the output file
         5                     Send a ping
         q                     Quit
@@ -31,7 +34,7 @@ class Client(sock: String) {
         channel.use { chan ->
             channel.connect(sockAddress)
 
-            println("Usage:\n$CLIENT_USAGE")
+            println(CLIENT_USAGE)
 
             while (true) {
                 print("> ")

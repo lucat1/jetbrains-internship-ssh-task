@@ -57,7 +57,7 @@ class MessageTypeException(messageType: UByte): Exception("Invalid message type:
  * @param messageType The MessageType associated with the header.
  * @param contentLength The content length provided in the header.
  */
-class InvalidHeaderException(messageType: MessageType, contentLength: UInt): Exception("Message type $messageType has content length $contentLength")
+class InvalidHeaderException(messageType: MessageType, contentLength: UInt): Exception("Message with type $messageType has content length $contentLength")
 
 /**
  * Representation of the Header for a Message.

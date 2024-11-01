@@ -30,10 +30,7 @@ Arguments:
     socket_path     The path to the Unix Domain Socket where the program will bind and listen for messages.
     
 Description:
-    Opens a connection to the specified UNIX socket and allows to send commands interactively
-    The syntax for a command is:
-        <Message Type>  <Data>
-    Message Types:
+    Opens a connection to the specified UNIX socket and allows to send commands interactively.
 $CLIENT_USAGE
 """
 

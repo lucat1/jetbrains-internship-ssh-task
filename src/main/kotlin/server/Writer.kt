@@ -33,11 +33,13 @@ class Writer(private val outputPath: Path, private val chan: Channel<WriterMessa
             try {
                 when (msg.action) {
                     WriterAction.Write -> {
-                        assert(msg.content != null)
-                        FileOutputStream(file, true).bufferedWriter().use { writer ->
-                            writer.write(msg.content as String)
-                            logger.info("Appended {bytes} characters to {file}", msg.content.length, file)
-                        }
+                        if (msg.content != null) {
+                            FileOutputStream(file, true).bufferedWriter().use { writer ->
+                                writer.write(msg.content)
+                                logger.info("Appended {bytes} characters to {file}", msg.content.length, file)
+                            }
+                        } else
+                            logger.warn("Avoiding append as Write message content is empty")
                     }
 
                     WriterAction.Clear -> {
