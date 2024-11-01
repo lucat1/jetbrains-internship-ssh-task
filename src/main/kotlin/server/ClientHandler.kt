@@ -4,18 +4,26 @@ import io.klogging.Klogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
-import me.lucat1.sock.InvalidHeaderException
-import me.lucat1.sock.Message
-import me.lucat1.sock.MessageType
-import me.lucat1.sock.ReaderWriter
+import me.lucat1.sock.protocol.InvalidHeaderException
+import me.lucat1.sock.protocol.Message
+import me.lucat1.sock.protocol.MessageType
+import me.lucat1.sock.protocol.ReaderWriter
 import java.nio.channels.SocketChannel
 
-class ClientHandler(private val socket: SocketChannel,
-                    private val id: Int,
+class ClientHandler(socket: SocketChannel,
                     private val writerChan: Channel<WriterMessage>,
                     private val logger: Klogger) {
     private val rw = ReaderWriter(socket, logger)
 
+    /*
+     * Handles a client connection. Executes the following logic:
+     * 1. Loop until we have messages to read in:
+     *    1.1 Validate the received.
+     *    1.2 Based on the message type, perform the requested action by either:
+     *        1.2.1 Directly replying if the action doesn't involve any IO operation.
+     *        1.2.2 Sending a message to the writer coroutine to perform an operation on the output file.
+     * 2. When either the client disconnects or we receive a fatal exception, terminate the connection.
+     */
     suspend fun handle() = withContext(Dispatchers.IO) {
         logger.info("Client connected")
         try {
@@ -58,14 +66,17 @@ class ClientHandler(private val socket: SocketChannel,
         }
     }
 
+    // writes an Error message on the socket, optionally containing an error message
     private suspend fun sendError(cause: String?) {
         rw.write(Message.checked(MessageType.Error, cause))
     }
 
+    // writes an OK message on the socket
     private suspend fun sendOk() {
         rw.write(Message.checked(MessageType.Ok, null))
     }
 
+    // Sends a message to the writer coroutine notifying it of an action which should be completed
     private suspend fun callWriter(writerAction: WriterAction, content: String?) {
         val ackChannel = Channel<Throwable?>()
         val writerMessage = WriterMessage(writerAction, content, ackChannel)

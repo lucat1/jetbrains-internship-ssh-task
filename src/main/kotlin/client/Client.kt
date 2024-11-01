@@ -3,9 +3,9 @@ package me.lucat1.sock.reader
 import io.klogging.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import me.lucat1.sock.Message
-import me.lucat1.sock.MessageType
-import me.lucat1.sock.ReaderWriter
+import me.lucat1.sock.protocol.Message
+import me.lucat1.sock.protocol.MessageType
+import me.lucat1.sock.protocol.ReaderWriter
 import java.io.File
 import java.net.StandardProtocolFamily
 

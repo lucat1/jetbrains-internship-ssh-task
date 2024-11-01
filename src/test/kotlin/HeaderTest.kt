@@ -1,7 +1,7 @@
-import me.lucat1.sock.HEADER_SIZE
-import me.lucat1.sock.Header
-import me.lucat1.sock.MessageType
-import me.lucat1.sock.uIntToUBytes
+import me.lucat1.sock.protocol.HEADER_SIZE
+import me.lucat1.sock.protocol.Header
+import me.lucat1.sock.protocol.MessageType
+import me.lucat1.sock.protocol.uIntToUBytes
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*

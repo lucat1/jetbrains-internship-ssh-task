@@ -1,5 +1,5 @@
-import me.lucat1.sock.uBytesToUInt
-import me.lucat1.sock.uIntToUBytes
+import me.lucat1.sock.protocol.uBytesToUInt
+import me.lucat1.sock.protocol.uIntToUBytes
 import org.junit.jupiter.api.Test
 
 import org.junit.jupiter.api.Assertions.*

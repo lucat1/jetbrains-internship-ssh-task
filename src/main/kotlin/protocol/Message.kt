@@ -1,4 +1,4 @@
-package me.lucat1.sock
+package me.lucat1.sock.protocol
 
 /*
  * Message header size. Given by:
@@ -93,7 +93,7 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
                 throw MessageTypeException(mt)
             }
 
-            val cl = rawHeader.copyOfRange(CONTENT_LENGTH_START, CONTENT_LENGTH_END+1)
+            val cl = rawHeader.copyOfRange(CONTENT_LENGTH_START, CONTENT_LENGTH_END +1)
             contentLength = uBytesToUInt(cl)
 
             return Header(messageType, contentLength)
@@ -110,7 +110,7 @@ class Header(val messageType: MessageType, val contentLength: UInt) {
         ba[0] = messageType.toUByte()
         val cl = uIntToUBytes(contentLength)
         for (i in 0..3) {
-            ba[CONTENT_LENGTH_START+i] = cl[i]
+            ba[CONTENT_LENGTH_START +i] = cl[i]
         }
         return ba
     }

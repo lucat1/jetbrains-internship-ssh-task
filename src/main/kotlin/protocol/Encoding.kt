@@ -1,4 +1,4 @@
-package me.lucat1.sock
+package me.lucat1.sock.protocol
 
 /**
  * This file provides primitives for encoding uint32s into a byte array.

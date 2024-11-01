@@ -15,7 +15,6 @@ import java.nio.channels.ServerSocketChannel
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.Path
-import kotlin.system.exitProcess
 
 class Server(sock: String, output: String) {
     private val logger = logger("server")
@@ -31,8 +30,7 @@ class Server(sock: String, output: String) {
         try {
             Files.deleteIfExists(sockFile.toPath())
         } catch (e: Exception) {
-            logger.error("Could not delete previous UNIX socket at {sockPath}", sockFile.path)
-            exitProcess(5)
+            logger.fatal("Could not delete previous UNIX socket at {sockPath}", sockFile.path)
         }
         val channel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
         logger.info("Listening on {sockPath}, writing to {outputPath}", sockFile.path, outputPath)
@@ -59,33 +57,34 @@ class Server(sock: String, output: String) {
         }
     }
 
+    /*
+     * Binds to the socket channel and listens for incoming connections.
+     * When one is received, a new ClientHandler is instantiated to handle it
+     * and gets executed in a separate coroutine.
+     */
     private suspend fun bind(channel: ServerSocketChannel) = withContext(Dispatchers.IO) {
         var clientId = 0
         try {
             channel.bind(sockAddress).run {
                 while (true) {
                     val socket = channel.accept()
-                    val clientId = clientId++
+                    val cid = clientId++
 
-                    withContext(logContext("clientId" to clientId)) {
-                        val handler = ClientHandler(socket, clientId, writerChannel, logger)
+                    withContext(logContext("clientId" to cid)) {
                         launch {
                             /*
                              * Handle the client messages in a separate coroutine.
                              * This way we can support multiple clients sending requests concurrently.
                              */
-                            socket.run { handler.handle() }
+                            socket.run {
+                                ClientHandler(socket, writerChannel, logger).handle()
+                            }
                         }
                     }
                 }
             }
         } catch (e: IOException) {
-            println("Could not bind to UNIX socket on ${sockFile.path}")
-            e.printStackTrace()
-            exitProcess(6)
+            logger.fatal(e, "Could not bind to UNIX socket on {sockPath}", sockFile.path)
         }
-    }
-
-    private suspend fun writer() = withContext(Dispatchers.IO) {
     }
 }

@@ -1,4 +1,4 @@
-package me.lucat1.sock
+package me.lucat1.sock.protocol
 
 import io.klogging.Klogger
 import kotlinx.coroutines.Dispatchers
